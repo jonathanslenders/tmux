@@ -25,6 +25,7 @@
  */
 
 enum cmd_retval	 cmd_start_server_exec(struct cmd *, struct cmd_q *);
+void		 cmd_start_server_prepare(struct cmd *, struct cmd_q *);
 
 const struct cmd_entry cmd_start_server_entry = {
 	"start-server", "start",
@@ -33,8 +34,15 @@ const struct cmd_entry cmd_start_server_entry = {
 	CMD_STARTSERVER,
 	NULL,
 	NULL,
-	cmd_start_server_exec
+	cmd_start_server_exec,
+	cmd_start_server_prepare
 };
+
+void
+cmd_start_server_prepare(unused struct cmd *self, unused struct cmd_q *cmdq)
+{
+	return;
+}
 
 enum cmd_retval
 cmd_start_server_exec(unused struct cmd *self, unused struct cmd_q *cmdq)

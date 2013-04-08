@@ -28,6 +28,7 @@
  */
 
 enum cmd_retval	 cmd_suspend_client_exec(struct cmd *, struct cmd_q *);
+void		 cmd_suspend_client_prepare(struct cmd *, struct cmd_q *);
 
 const struct cmd_entry cmd_suspend_client_entry = {
 	"suspend-client", "suspendc",
@@ -36,16 +37,25 @@ const struct cmd_entry cmd_suspend_client_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_suspend_client_exec
+	cmd_suspend_client_exec,
+	cmd_suspend_client_prepare
 };
 
-enum cmd_retval
-cmd_suspend_client_exec(struct cmd *self, struct cmd_q *cmdq)
+void
+cmd_suspend_client_prepare(struct cmd *self, struct cmd_q *cmdq)
 {
-	struct args	*args = self->args;
+	struct args		*args = self->args;
+	struct cmd_context	*cmd_ctx = cmdq->cmd_ctx;
+
+	cmd_ctx->client = cmd_find_client(cmdq, args_get(args, 't'), 0);
+}
+
+enum cmd_retval
+cmd_suspend_client_exec(unused struct cmd *self, struct cmd_q *cmdq)
+{
 	struct client	*c;
 
-	if ((c = cmd_find_client(cmdq, args_get(args, 't'), 0)) == NULL)
+	if ((c = cmdq->cmd_ctx->client) == NULL)
 		return (CMD_RETURN_ERROR);
 
 	tty_stop_tty(&c->tty);

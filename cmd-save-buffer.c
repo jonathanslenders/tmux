@@ -30,6 +30,7 @@
  */
 
 enum cmd_retval	 cmd_save_buffer_exec(struct cmd *, struct cmd_q *);
+void		 cmd_save_buffer_prepare(struct cmd *, struct cmd_q *);
 
 const struct cmd_entry cmd_save_buffer_entry = {
 	"save-buffer", "saveb",
@@ -38,7 +39,8 @@ const struct cmd_entry cmd_save_buffer_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_save_buffer_exec
+	cmd_save_buffer_exec,
+	cmd_save_buffer_prepare
 };
 
 const struct cmd_entry cmd_show_buffer_entry = {
@@ -48,8 +50,15 @@ const struct cmd_entry cmd_show_buffer_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_save_buffer_exec
+	cmd_save_buffer_exec,
+	cmd_save_buffer_prepare
 };
+
+void
+cmd_save_buffer_prepare(unused struct cmd *self, unused struct cmd_q *cmdq)
+{
+	return;
+}
 
 enum cmd_retval
 cmd_save_buffer_exec(struct cmd *self, struct cmd_q *cmdq)

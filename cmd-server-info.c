@@ -31,6 +31,7 @@
  */
 
 enum cmd_retval	 cmd_server_info_exec(struct cmd *, struct cmd_q *);
+void		 cmd_server_info_prepare(struct cmd *, struct cmd_q *);
 
 const struct cmd_entry cmd_server_info_entry = {
 	"server-info", "info",
@@ -39,8 +40,15 @@ const struct cmd_entry cmd_server_info_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_server_info_exec
+	cmd_server_info_exec,
+	cmd_server_info_prepare
 };
+
+void
+cmd_server_info_prepare(unused struct cmd *self, unused struct cmd_q *cmdq)
+{
+	return;
+}
 
 enum cmd_retval
 cmd_server_info_exec(unused struct cmd *self, struct cmd_q *cmdq)

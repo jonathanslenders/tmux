@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
- * Copyright (c) 2007 Nicholas Marriott <nicm@users.sourceforge.net>
+ * Copyright (c) 2012 Thomas Adam <thomas@xteddy.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,27 +18,29 @@
 
 #include <sys/types.h>
 
+#include <ctype.h>
+#include <stdlib.h>
+
+#include <string.h>
+
 #include "tmux.h"
 
-/*
- * Cause client to report an error and exit with 1 if session doesn't exist.
- */
+enum cmd_retval cmd_show_hooks_exec(struct cmd *, struct cmd_q *);
+void		cmd_show_hooks_prepare(struct cmd *, struct cmd_q *);
 
-enum cmd_retval	 cmd_has_session_exec(struct cmd *, struct cmd_q *);
-void		 cmd_has_session_prepare(struct cmd *, struct cmd_q *);
-
-const struct cmd_entry cmd_has_session_entry = {
-	"has-session", "has",
-	"t:", 0, 0,
-	CMD_TARGET_SESSION_USAGE,
+const struct cmd_entry cmd_show_hooks_entry = {
+	"show-hooks", NULL,
+	"gt:", 0, 1,
+	"[-g] " CMD_TARGET_SESSION_USAGE,
 	0,
 	NULL,
 	NULL,
-	cmd_has_session_exec,
-	cmd_has_session_prepare
+	cmd_show_hooks_exec,
+	cmd_show_hooks_prepare
 };
 
-void cmd_has_session_prepare(struct cmd *self, struct cmd_q *cmdq)
+void
+cmd_show_hooks_prepare(struct cmd *self, struct cmd_q *cmdq)
 {
 	struct args		*args = self->args;
 	struct cmd_context	*cmd_ctx = cmdq->cmd_ctx;
@@ -47,10 +49,24 @@ void cmd_has_session_prepare(struct cmd *self, struct cmd_q *cmdq)
 }
 
 enum cmd_retval
-cmd_has_session_exec(unused struct cmd *self, struct cmd_q *cmdq)
+cmd_show_hooks_exec(struct cmd *self, struct cmd_q *cmdq)
 {
-	if (cmdq->cmd_ctx->session == NULL)
+	struct args	*args = self->args;
+	struct session	*s;
+	struct hook	*hook;
+	struct hooks	*hooks_ent;
+	char		 tmp[BUFSIZ];
+	size_t		 used;
+
+	if ((s = cmdq->cmd_ctx->session) == NULL)
 		return (CMD_RETURN_ERROR);
 
+	hooks_ent = args_has(args, 'g') ? &global_hooks : &s->hooks;
+
+	RB_FOREACH(hook, hooks, hooks_ent) {
+		used = xsnprintf(tmp, sizeof tmp, "%s -> ", hook->name);
+		cmd_list_print(hook->cmdlist, tmp + used, (sizeof tmp) - used);
+		cmdq_print(cmdq, "%s", tmp);
+	}
 	return (CMD_RETURN_NORMAL);
 }

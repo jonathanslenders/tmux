@@ -29,6 +29,7 @@
  */
 
 enum cmd_retval	 cmd_find_window_exec(struct cmd *, struct cmd_q *);
+void		 cmd_find_window_prepare(struct cmd *, struct cmd_q *);
 
 void	cmd_find_window_callback(struct window_choose_data *);
 
@@ -49,7 +50,8 @@ const struct cmd_entry cmd_find_window_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_find_window_exec
+	cmd_find_window_exec,
+	cmd_find_window_prepare
 };
 
 struct cmd_find_window_data {
@@ -126,6 +128,16 @@ cmd_find_window_match(struct cmd_find_window_data_list *find_list,
 	}
 }
 
+void
+cmd_find_window_prepare(struct cmd *self, struct cmd_q *cmdq)
+{
+	struct args		*args = self->args;
+	struct cmd_context	*cmd_ctx = cmdq->cmd_ctx;
+
+	cmd_ctx->client = cmd_current_client(cmdq);
+	cmd_ctx->wl = cmd_find_window(cmdq, args_get(args, 't'), NULL);
+}
+
 enum cmd_retval
 cmd_find_window_exec(struct cmd *self, struct cmd_q *cmdq)
 {
@@ -139,13 +151,13 @@ cmd_find_window_exec(struct cmd *self, struct cmd_q *cmdq)
 	const char			*template;
 	u_int				 i, match_flags;
 
-	if ((c = cmd_current_client(cmdq)) == NULL) {
+	if ((c = cmdq->cmd_ctx->client) == NULL) {
 		cmdq_error(cmdq, "no client available");
 		return (CMD_RETURN_ERROR);
 	}
 	s = c->session;
 
-	if ((wl = cmd_find_window(cmdq, args_get(args, 't'), NULL)) == NULL)
+	if ((wl = cmdq->cmd_ctx->wl) == NULL)
 		return (CMD_RETURN_ERROR);
 
 	if ((template = args_get(args, 'F')) == NULL)

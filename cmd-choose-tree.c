@@ -33,6 +33,7 @@
  */
 
 enum cmd_retval	cmd_choose_tree_exec(struct cmd *, struct cmd_q *);
+void		cmd_choose_tree_prepare(struct cmd *, struct cmd_q *);
 
 const struct cmd_entry cmd_choose_tree_entry = {
 	"choose-tree", NULL,
@@ -42,7 +43,8 @@ const struct cmd_entry cmd_choose_tree_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_choose_tree_exec
+	cmd_choose_tree_exec,
+	cmd_choose_tree_prepare
 };
 
 const struct cmd_entry cmd_choose_session_entry = {
@@ -52,7 +54,8 @@ const struct cmd_entry cmd_choose_session_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_choose_tree_exec
+	cmd_choose_tree_exec,
+	cmd_choose_tree_prepare
 };
 
 const struct cmd_entry cmd_choose_window_entry = {
@@ -62,8 +65,20 @@ const struct cmd_entry cmd_choose_window_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_choose_tree_exec
+	cmd_choose_tree_exec,
+	cmd_choose_tree_prepare
 };
+
+void
+cmd_choose_tree_prepare(struct cmd *self, struct cmd_q *cmdq)
+{
+	struct args		*args = self->args;
+	struct cmd_context	*cmd_ctx = cmdq->cmd_ctx;
+
+	cmd_ctx->client = cmd_current_client(cmdq);
+	cmd_ctx->session = cmd_ctx->client->session;
+	cmd_ctx->wl = cmd_find_window(cmdq, args_get(args, 't'), NULL);
+}
 
 enum cmd_retval
 cmd_choose_tree_exec(struct cmd *self, struct cmd_q *cmdq)
@@ -84,15 +99,15 @@ cmd_choose_tree_exec(struct cmd *self, struct cmd_q *cmdq)
 	ses_template = win_template = NULL;
 	ses_action = win_action = NULL;
 
-	if ((c = cmd_current_client(cmdq)) == NULL) {
+	if ((c = cmdq->cmd_ctx->client) == NULL) {
 		cmdq_error(cmdq, "no client available");
 		return (CMD_RETURN_ERROR);
 	}
 
-	if ((s = c->session) == NULL)
+	if ((s = cmdq->cmd_ctx->session) == NULL)
 		return (CMD_RETURN_ERROR);
 
-	if ((wl = cmd_find_window(cmdq, args_get(args, 't'), NULL)) == NULL)
+	if ((wl = cmdq->cmd_ctx->wl) == NULL)
 		return (CMD_RETURN_ERROR);
 
 	if (window_pane_set_mode(wl->window->active, &window_choose_mode) != 0)

@@ -32,6 +32,7 @@
 
 enum cmd_retval	 cmd_load_buffer_exec(struct cmd *, struct cmd_q *);
 void		 cmd_load_buffer_callback(struct client *, int, void *);
+void		 cmd_load_buffer_prepare(struct cmd *, struct cmd_q *);
 
 const struct cmd_entry cmd_load_buffer_entry = {
 	"load-buffer", "loadb",
@@ -40,8 +41,15 @@ const struct cmd_entry cmd_load_buffer_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_load_buffer_exec
+	cmd_load_buffer_exec,
+	cmd_load_buffer_prepare
 };
+
+void
+cmd_load_buffer_prepare(unused struct cmd *self, unused struct cmd_q *cmdq)
+{
+	return;
+}
 
 enum cmd_retval
 cmd_load_buffer_exec(struct cmd *self, struct cmd_q *cmdq)

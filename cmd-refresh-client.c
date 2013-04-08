@@ -25,6 +25,7 @@
  */
 
 enum cmd_retval	 cmd_refresh_client_exec(struct cmd *, struct cmd_q *);
+void		 cmd_refresh_client_prepare(struct cmd *, struct cmd_q *);
 
 const struct cmd_entry cmd_refresh_client_entry = {
 	"refresh-client", "refresh",
@@ -33,8 +34,18 @@ const struct cmd_entry cmd_refresh_client_entry = {
 	0,
 	NULL,
 	NULL,
-	cmd_refresh_client_exec
+	cmd_refresh_client_exec,
+	cmd_refresh_client_prepare
 };
+
+void
+cmd_refresh_client_prepare(struct cmd *self, struct cmd_q *cmdq)
+{
+	struct args		*args = self->args;
+	struct cmd_context	*cmd_ctx = cmdq->cmd_ctx;
+
+	cmd_ctx->client = cmd_find_client(cmdq, args_get(args, 't'), 0);
+}
 
 enum cmd_retval
 cmd_refresh_client_exec(struct cmd *self, struct cmd_q *cmdq)
@@ -44,7 +55,7 @@ cmd_refresh_client_exec(struct cmd *self, struct cmd_q *cmdq)
 	const char	*size;
 	u_int		 w, h;
 
-	if ((c = cmd_find_client(cmdq, args_get(args, 't'), 0)) == NULL)
+	if ((c = cmdq->cmd_ctx->client) == NULL)
 		return (CMD_RETURN_ERROR);
 
 	if (args_has(args, 'C')) {
