@@ -945,6 +945,7 @@ struct window_pane {
 	char		*cwd;
 	char		*name;
 	int			*automatic_rename;
+	struct screen	 status;
 
 	pid_t		 pid;
 	char		 tty[TTY_NAME_MAX];

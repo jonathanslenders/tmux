@@ -188,47 +188,6 @@ screen_redraw_check_active(u_int px, u_int py, struct window *w,
 		return (0);
 }
 
-/* Copy string in new string, limited by length or first newline. */
-char *
-strip_title(char *title, int length)
-{
-	char *result;
-	int pos;
-
-	result = xmalloc(length + 1);
-
-	/* We take one character padding, left and right */
-	length -= 1;
-	pos = 0;
-	result[pos] = ' ';
-	pos ++;
-
-	while (*title && pos < length) {
-		/* Convert newlines to spaces */
-		if (*title == '\n' || *title == '\r')
-			result[pos] = ' ';
-		else
-			result[pos] = *title;
-
-		pos ++;
-		title ++;
-	}
-
-	/* dots if the string has been trimmed */
-	if (pos == length && pos > 3) {
-		result[pos-1] = '.';
-		result[pos-2] = '.';
-		result[pos-3] = '.';
-	}
-
-	/* Trailing padding */
-	result[pos] = ' ';
-
-	result[pos+1] = NULL;
-
-	return result;
-}
-
 /* Redraw entire screen. */
 void
 screen_redraw_screen(struct client *c, int status_only, int borders_only)
@@ -241,7 +200,6 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	struct grid_cell	 active_gc, other_gc, active_status_gc, other_status_gc;
 	u_int		 	 i, j, type, top;
 	int		 	 status, spos, fg, bg, attr;
-	char *stripped_title;
 
 	/* Suspended clients should not be updated. */
 	if (c->flags & CLIENT_SUSPENDED)
@@ -320,25 +278,36 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 		}
 	}
 
-	/* Pane title */
+	/* Pane titles */
 	if (options_get_number(woo, "pane-status-visibility")) {
+		int utf8flag;
+		utf8flag = options_get_number(&wp->window->options, "utf8");
+
 		TAILQ_FOREACH(wp, &w->panes, entry) {
-			if (options_get_number(woo, "pane-status-position") == 0)
-				/* On top */
-				tty_cursor(tty, wp->xoff + 2, top + wp->yoff - 1);
-			else
-				/* On bottom */
-				tty_cursor(tty, wp->xoff + 2, top + wp->yoff + wp->sy);
-
-			if (wp == w->active)
-				tty_attributes(tty, &active_status_gc);
-			else
-				tty_attributes(tty, &other_status_gc);
-
 			if (wp->name) {
-				stripped_title = strip_title(wp->name, wp->sx - 4);
-				tty_puts(tty, stripped_title);
-				free(stripped_title);
+				size_t status_len;
+				struct screen_write_ctx ctx;
+
+				/* TODO: move screen creation to somewhere else. */
+				status_len = screen_write_cstrlen(utf8flag, "%s", wp->name);
+
+				if (status_len > wp->sx - 4)
+					status_len = wp->sx - 4; /* TODO: does not seem to work */
+
+				screen_init(&wp->status, status_len + 2, 1, 0);
+				screen_write_start(&ctx, NULL, &wp->status);
+				if (wp == w->active)
+					screen_write_puts(&ctx, &active_status_gc, " %s ", wp->name);
+				else
+					screen_write_puts(&ctx, &other_status_gc, " %s ", wp->name);
+				screen_write_stop(&ctx);
+
+				if (options_get_number(woo, "pane-status-position") == 0)
+					/* On top */
+					tty_draw_line(tty, &wp->status, 0, wp->xoff + 2, wp->yoff - 1);
+				else
+					/* On bottom */
+					tty_draw_line(tty, &wp->status, 0, wp->xoff + 2, wp->yoff + wp->sy);
 			}
 			tty_cursor(tty, 0, 0);
 		}
