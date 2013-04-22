@@ -26,8 +26,10 @@ int	screen_redraw_cell_border1(struct window_pane *, u_int, u_int);
 int	screen_redraw_cell_border(struct client *, u_int, u_int);
 int	screen_redraw_check_cell(struct client *, u_int, u_int,
 	    struct window_pane **);
+
 int	screen_redraw_check_active(u_int, u_int, struct window *,
 	    struct window_pane *);
+char * strip_title(char *title, int length);
 
 void	screen_redraw_draw_number(struct client *, struct window_pane *);
 
@@ -45,7 +47,9 @@ void	screen_redraw_draw_number(struct client *, struct window_pane *);
 #define CELL_JOIN 11
 #define CELL_OUTSIDE 12
 
-#define CELL_BORDERS " xqlkmjwvtun~"
+/* #define CELL_BORDERS " xqlkmjwvtun~" */
+#define CELL_BORDERS " xqlkmjwqtun~" /* XXX: Not correct. I changed one symbol to
+                                        get the upper border correct with pane titles. */
 
 /* Check if cell is on the border of a particular pane. */
 int
@@ -184,17 +188,60 @@ screen_redraw_check_active(u_int px, u_int py, struct window *w,
 		return (0);
 }
 
+/* Copy string in new string, limited by length or first newline. */
+char *
+strip_title(char *title, int length)
+{
+	char *result;
+	int pos;
+
+	result = xmalloc(length + 1);
+
+	/* We take one character padding, left and right */
+	length -= 1;
+	pos = 0;
+	result[pos] = ' ';
+	pos ++;
+
+	while (*title && pos < length) {
+		/* Convert newlines to spaces */
+		if (*title == '\n' || *title == '\r')
+			result[pos] = ' ';
+		else
+			result[pos] = *title;
+
+		pos ++;
+		title ++;
+	}
+
+	/* dots if the string has been trimmed */
+	if (pos == length && pos > 3) {
+		result[pos-1] = '.';
+		result[pos-2] = '.';
+		result[pos-3] = '.';
+	}
+
+	/* Trailing padding */
+	result[pos] = ' ';
+
+	result[pos+1] = NULL;
+
+	return result;
+}
+
 /* Redraw entire screen. */
 void
 screen_redraw_screen(struct client *c, int status_only, int borders_only)
 {
 	struct window		*w = c->session->curw->window;
 	struct options		*oo = &c->session->options;
+	struct options		*woo = &w->options;
 	struct tty		*tty = &c->tty;
 	struct window_pane	*wp;
-	struct grid_cell	 active_gc, other_gc;
+	struct grid_cell	 active_gc, other_gc, active_status_gc, other_status_gc;
 	u_int		 	 i, j, type, top;
-	int		 	 status, spos, fg, bg;
+	int		 	 status, spos, fg, bg, attr;
+	char *stripped_title;
 
 	/* Suspended clients should not be updated. */
 	if (c->flags & CLIENT_SUSPENDED)
@@ -223,6 +270,8 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	/* Set up pane border attributes. */
 	memcpy(&other_gc, &grid_marker_cell, sizeof other_gc);
 	memcpy(&active_gc, &grid_marker_cell, sizeof active_gc);
+	memcpy(&other_status_gc, &grid_marker_cell, sizeof other_status_gc);
+	memcpy(&active_status_gc, &grid_marker_cell, sizeof active_status_gc);
 	active_gc.attr = other_gc.attr = GRID_ATTR_CHARSET;
 	fg = options_get_number(oo, "pane-border-fg");
 	colour_set_fg(&other_gc, fg);
@@ -232,6 +281,23 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	colour_set_fg(&active_gc, fg);
 	bg = options_get_number(oo, "pane-active-border-bg");
 	colour_set_bg(&active_gc, bg);
+
+	/* Pane status attributes */
+	bg = options_get_number(oo, "pane-status-bg");
+	colour_set_bg(&other_status_gc, bg);
+	fg = options_get_number(oo, "pane-status-fg");
+	colour_set_fg(&other_status_gc, fg);
+	attr = options_get_number(oo, "pane-status-attr");
+	if (attr != 0)
+		other_status_gc.attr = attr;
+
+	bg = options_get_number(oo, "pane-active-status-bg");
+	colour_set_bg(&active_status_gc, bg);
+	fg = options_get_number(oo, "pane-active-status-fg");
+	colour_set_fg(&active_status_gc, fg);
+	attr = options_get_number(oo, "pane-active-status-attr");
+	if (attr != 0)
+		active_status_gc.attr = attr;
 
 	/* Draw background and borders. */
 	for (j = 0; j < tty->sy - status; j++) {
@@ -254,6 +320,30 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 		}
 	}
 
+	/* Pane title */
+	if (options_get_number(woo, "pane-status-visibility")) {
+		TAILQ_FOREACH(wp, &w->panes, entry) {
+			if (options_get_number(woo, "pane-status-position") == 0)
+				/* On top */
+				tty_cursor(tty, wp->xoff + 2, top + wp->yoff - 1);
+			else
+				/* On bottom */
+				tty_cursor(tty, wp->xoff + 2, top + wp->yoff + wp->sy);
+
+			if (wp == w->active)
+				tty_attributes(tty, &active_status_gc);
+			else
+				tty_attributes(tty, &other_status_gc);
+
+			if (wp->name) {
+				stripped_title = strip_title(wp->name, wp->sx - 4);
+				tty_puts(tty, stripped_title);
+				free(stripped_title);
+			}
+			tty_cursor(tty, 0, 0);
+		}
+	}
+
 	/* If only drawing borders, that's it. */
 	if (borders_only)
 		return;
@@ -272,6 +362,7 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 			tty_draw_line(
 			    tty, wp->screen, i, wp->xoff, top + wp->yoff);
 		}
+
 		if (c->flags & CLIENT_IDENTIFY)
 			screen_redraw_draw_number(c, wp);
 	}

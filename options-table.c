@@ -260,6 +260,16 @@ const struct options_table_entry session_options_table[] = {
 	  .default_num = 2
 	},
 
+	{ .name = "pane-active-status-bg",
+	  .type = OPTIONS_TABLE_COLOUR,
+	  .default_num = 2
+	},
+
+	{ .name = "pane-active-status-fg",
+	  .type = OPTIONS_TABLE_COLOUR,
+	  .default_num = 8
+	},
+
 	{ .name = "pane-border-bg",
 	  .type = OPTIONS_TABLE_COLOUR,
 	  .default_num = 8
@@ -268,6 +278,26 @@ const struct options_table_entry session_options_table[] = {
 	{ .name = "pane-border-fg",
 	  .type = OPTIONS_TABLE_COLOUR,
 	  .default_num = 8
+	},
+
+	{ .name = "pane-active-status-attr",
+	  .type = OPTIONS_TABLE_ATTRIBUTES,
+	  .default_num = 0
+	},
+
+	{ .name = "pane-status-attr",
+	  .type = OPTIONS_TABLE_ATTRIBUTES,
+	  .default_num = 0
+	},
+
+	{ .name = "pane-status-bg",
+	  .type = OPTIONS_TABLE_COLOUR,
+	  .default_num = 8
+	},
+
+	{ .name = "pane-status-fg",
+	  .type = OPTIONS_TABLE_COLOUR,
+	  .default_num = 2
 	},
 
 	{ .name = "prefix",
@@ -591,6 +621,17 @@ const struct options_table_entry window_options_table[] = {
 	  .type = OPTIONS_TABLE_NUMBER,
 	  .minimum = 0,
 	  .maximum = USHRT_MAX,
+	  .default_num = 0
+	},
+
+	{ .name = "pane-status-visibility",
+	  .type = OPTIONS_TABLE_FLAG,
+	  .default_num = 0
+	},
+
+	{ .name = "pane-status-position",
+	  .type = OPTIONS_TABLE_CHOICE,
+	  .choices = options_table_status_position_list,
 	  .default_num = 0
 	},
 

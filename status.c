@@ -447,7 +447,12 @@ status_replace1(struct client *c, struct session *s, struct winlink *wl,
 		ptr = wp->base.title;
 		goto do_replace;
 	case 'W':
-		ptr = wl->window->name;
+		if (wl->window->name)
+			ptr = wl->window->name;
+		else if (wl->window->active && wl->window->active->name)
+			ptr = wl->window->active->name;
+		else
+		    ptr = "";
 		goto do_replace;
 	case 'F':
 		ptr = window_printable_flags(s, wl);

@@ -163,6 +163,34 @@ layout_fix_offsets(struct layout_cell *lc)
 	}
 }
 
+/* Returns 1 if we need to reserve space for the pane title bar.
+   This is the case for the most upper panes ony. */
+int
+need_status_space(struct layout_cell *lc, int at_the_top)
+{
+	struct layout_cell * first_lc;
+
+	if (lc->parent) {
+		if (lc->parent->type == LAYOUT_LEFTRIGHT)
+			return need_status_space(lc->parent, at_the_top);
+		else if (lc->parent->type == LAYOUT_TOPBOTTOM)
+		{
+			if (at_the_top)
+				first_lc = TAILQ_FIRST(&(lc->parent->cells));
+			else
+				first_lc = TAILQ_LAST(&(lc->parent->cells), layout_cells);
+
+			if (lc == first_lc)
+				return need_status_space(lc->parent, at_the_top);
+			else
+				return 0;
+		}
+	}
+	else
+		/* The most parent pane always need to have title space. */
+		return 1;
+}
+
 /* Update pane offsets and sizes based on their cells. */
 void
 layout_fix_panes(struct window *w, u_int wsx, u_int wsy)
@@ -170,12 +198,21 @@ layout_fix_panes(struct window *w, u_int wsx, u_int wsy)
 	struct window_pane	*wp;
 	struct layout_cell	*lc;
 	u_int			 sx, sy;
+	int shift = 0;
+	int pane_status_enabled = options_get_number(&w->options, "pane-status-visibility");
+	int at_the_top = options_get_number(&w->options, "pane-status-position") == 0;
 
 	TAILQ_FOREACH(wp, &w->panes, entry) {
 		if ((lc = wp->layout_cell) == NULL)
 			continue;
+
+		shift = pane_status_enabled && need_status_space(lc, at_the_top);
+
 		wp->xoff = lc->xoff;
 		wp->yoff = lc->yoff;
+
+		if (shift && at_the_top)
+			wp->yoff += 1;
 
 		/*
 		 * Layout cells are limited by the smallest size of other cells
@@ -213,6 +250,9 @@ layout_fix_panes(struct window *w, u_int wsx, u_int wsy)
 			if (sy < 2)
 				sy = lc->sy;
 		}
+
+		if (shift)
+			sy -= 1;
 
 		window_pane_resize(wp, sx, sy);
 	}

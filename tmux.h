@@ -921,6 +921,7 @@ struct window_choose_mode_item {
 /* Child window structure. */
 struct window_pane {
 	u_int		 id;
+	struct event	 name_timer;
 
 	struct window	*window;
 
@@ -942,6 +943,8 @@ struct window_pane {
 	char		*cmd;
 	char		*shell;
 	char		*cwd;
+	char		*name;
+	int			*automatic_rename;
 
 	pid_t		 pid;
 	char		 tty[TTY_NAME_MAX];
@@ -981,7 +984,6 @@ RB_HEAD(window_pane_tree, window_pane);
 struct window {
 	u_int		 id;
 	char		*name;
-	struct event	 name_timer;
 	struct timeval   silence_timer;
 
 	struct window_pane *active;
@@ -1807,6 +1809,7 @@ extern const struct cmd_entry cmd_previous_window_entry;
 extern const struct cmd_entry cmd_refresh_client_entry;
 extern const struct cmd_entry cmd_rename_session_entry;
 extern const struct cmd_entry cmd_rename_window_entry;
+extern const struct cmd_entry cmd_rename_pane_entry;
 extern const struct cmd_entry cmd_resize_pane_entry;
 extern const struct cmd_entry cmd_respawn_pane_entry;
 extern const struct cmd_entry cmd_respawn_window_entry;
@@ -2178,6 +2181,7 @@ struct window_pane *window_pane_find_up(struct window_pane *);
 struct window_pane *window_pane_find_down(struct window_pane *);
 struct window_pane *window_pane_find_left(struct window_pane *);
 struct window_pane *window_pane_find_right(struct window_pane *);
+void		 window_pane_set_name(struct window_pane *, const char *);
 void		 window_set_name(struct window *, const char *);
 void		 window_remove_ref(struct window *);
 void		 winlink_clear_flags(struct winlink *);
@@ -2257,8 +2261,8 @@ struct window_choose_data	*window_choose_add_item(struct window_pane *,
 void	window_choose_expand_all(struct window_pane *);
 
 /* names.c */
-void		 queue_window_name(struct window *);
-char		*default_window_name(struct window *);
+void		 queue_window_pane_name(struct window_pane *);
+char		*default_window_pane_name(struct window_pane *);
 
 /* signal.c */
 void	set_signals(void(*)(int, short, void *));

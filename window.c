@@ -288,8 +288,6 @@ window_create1(u_int sx, u_int sy)
 	w->sy = sy;
 
 	options_init(&w->options, &global_w_options);
-	if (options_get_number(&w->options, "automatic-rename"))
-		queue_window_name(w);
 
 	for (i = 0; i < ARRAY_LENGTH(&windows); i++) {
 		if (ARRAY_ITEM(&windows, i) == NULL) {
@@ -326,7 +324,7 @@ window_create(const char *name, const char *cmd, const char *shell,
 		w->name = xstrdup(name);
 		options_set_number(&w->options, "automatic-rename", 0);
 	} else
-		w->name = default_window_name(w);
+		w->name = NULL;
 
 	return (w);
 }
@@ -346,9 +344,6 @@ window_destroy(struct window *w)
 
 	if (w->layout_root != NULL)
 		layout_free(w);
-
-	if (event_initialized(&w->name_timer))
-		evtimer_del(&w->name_timer);
 
 	options_free(&w->options);
 
@@ -377,10 +372,21 @@ window_set_name(struct window *w, const char *new_name)
 }
 
 void
+window_pane_set_name(struct window_pane *wp, const char *new_name)
+{
+	free(wp->name);
+	wp->name = xstrdup(new_name);
+
+	if (wp->window->active == wp)
+		notify_window_renamed(wp->window);
+}
+
+void
 window_resize(struct window *w, u_int sx, u_int sy)
 {
 	w->sx = sx;
 	w->sy = sy;
+	layout_fix_panes(w, w->sx, w->sy); // TODO: not sure about this line.
 }
 
 void
@@ -673,6 +679,8 @@ window_pane_create(struct window *w, u_int sx, u_int sy, u_int hlimit)
 	wp->cmd = NULL;
 	wp->shell = NULL;
 	wp->cwd = NULL;
+	wp->name = NULL;
+	wp->automatic_rename = 1;
 
 	wp->fd = -1;
 	wp->event = NULL;
@@ -697,6 +705,8 @@ window_pane_create(struct window *w, u_int sx, u_int sy, u_int hlimit)
 	wp->screen = &wp->base;
 
 	input_init(wp);
+
+	queue_window_pane_name(wp);
 
 	return (wp);
 }
@@ -726,6 +736,10 @@ window_pane_destroy(struct window_pane *wp)
 	}
 
 	RB_REMOVE(window_pane_tree, &all_window_panes, wp);
+
+
+	if (event_initialized(&wp->name_timer))
+		evtimer_del(&wp->name_timer);
 
 	free(wp->cwd);
 	free(wp->shell);

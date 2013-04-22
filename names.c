@@ -26,80 +26,75 @@
 
 #include "tmux.h"
 
-void	 window_name_callback(unused int, unused short, void *);
+void window_pane_name_callback(unused int fd, unused short events, void *data);
 char	*parse_window_name(const char *);
 
 void
-queue_window_name(struct window *w)
+queue_window_pane_name(struct window_pane *wp)
 {
 	struct timeval	tv;
 
 	tv.tv_sec = 0;
-	tv.tv_usec = NAME_INTERVAL * 1000L;
+	tv.tv_usec = NAME_INTERVAL * 500L;
 
-	if (event_initialized(&w->name_timer))
-		evtimer_del(&w->name_timer);
-	evtimer_set(&w->name_timer, window_name_callback, w);
-	evtimer_add(&w->name_timer, &tv);
+	if (event_initialized(&wp->name_timer))
+		evtimer_del(&wp->name_timer);
+	evtimer_set(&wp->name_timer, window_pane_name_callback, wp);
+	evtimer_add(&wp->name_timer, &tv);
 }
 
 void
-window_name_callback(unused int fd, unused short events, void *data)
+window_pane_name_callback(unused int fd, unused short events, void *data)
 {
-	struct window	*w = data;
-	char		*name, *wname;
+	struct window_pane	*wp = data;
+	char		*name, *wpname;
 
-	if (w->active == NULL)
-		return;
-
-	if (!options_get_number(&w->options, "automatic-rename")) {
-		if (event_initialized(&w->name_timer))
-			event_del(&w->name_timer);
+	if (!wp->automatic_rename) {
+		if (event_initialized(&wp->name_timer))
+			event_del(&wp->name_timer);
 		return;
 	}
-	queue_window_name(w);
+	queue_window_pane_name(wp);
 
-	if (w->active->screen != &w->active->base)
-		name = NULL;
-	else
-		name = osdep_get_name(w->active->fd, w->active->tty);
+	name = osdep_get_name(wp->fd, wp->tty);
+
 	if (name == NULL)
-		wname = default_window_name(w);
+		wpname = default_window_pane_name(wp);
 	else {
 		/*
 		 * If tmux is using the default command, it will be a login
 		 * shell and argv[0] may have a - prefix. Remove this if it is
 		 * present. Ick.
 		 */
-		if (w->active->cmd != NULL && *w->active->cmd == '\0' &&
+		if (wp->cmd != NULL && *wp->cmd == '\0' &&
 		    name != NULL && name[0] == '-' && name[1] != '\0')
-			wname = parse_window_name(name + 1);
+			wpname = parse_window_name(name + 1);
 		else
-			wname = parse_window_name(name);
+			wpname = parse_window_name(name);
 		free(name);
 	}
-
-	if (w->active->fd == -1) {
-		xasprintf(&name, "%s[dead]", wname);
-		free(wname);
-		wname = name;
+	if (wp->fd == -1) {
+		xasprintf(&name, "%s[dead]", wpname);
+		free(wpname);
+		wpname = name;
 	}
 
-	if (strcmp(wname, w->name)) {
-		window_set_name(w, wname);
-		server_status_window(w);
+	if (wp->name == NULL || strcmp(wpname, wp->name)) {
+		window_pane_set_name(wp, wpname);
+
+		/* Redraw status bar if this is the active pane. */
+		if (wp->window != wp->window->active)
+			server_status_window(wp->window);
+
+		server_redraw_window_borders(wp->window);
 	}
-	free(wname);
+	free(wpname);
 }
 
 char *
-default_window_name(struct window *w)
+default_window_pane_name(struct window_pane *wp)
 {
-	if (w->active->screen != &w->active->base)
-		return (xstrdup("[tmux]"));
-	if (w->active->cmd != NULL && *w->active->cmd != '\0')
-		return (parse_window_name(w->active->cmd));
-	return (parse_window_name(w->active->shell));
+    return parse_window_name(wp->shell);
 }
 
 char *

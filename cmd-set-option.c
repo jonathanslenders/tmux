@@ -165,15 +165,17 @@ cmd_set_option_exec(struct cmd *self, struct cmd_q *cmdq)
 		for (i = 0; i < ARRAY_LENGTH(&windows); i++) {
 			if ((w = ARRAY_ITEM(&windows, i)) == NULL)
 				continue;
-			if (options_get_number(&w->options, "automatic-rename"))
-				queue_window_name(w);
-			else if (event_initialized(&w->name_timer))
-				evtimer_del(&w->name_timer);
+			//if (options_get_number(&w->options, "automatic-rename"))
+			//	queue_window_name(w);
+			//else if (event_initialized(&w->name_timer))
+			//	evtimer_del(&w->name_timer);
 		}
+        // TODO: start/stop pane timers instead.
 	}
 
 	/* Update sizes and redraw. May not need it but meh. */
-	recalculate_sizes();
+	recalculate_sizes(); // TODO: also layout thing for pane status bar
+    // layout_fix_panes(); // If the pane status was added or removed.
 	for (i = 0; i < ARRAY_LENGTH(&clients); i++) {
 		c = ARRAY_ITEM(&clients, i);
 		if (c != NULL && c->session != NULL)
