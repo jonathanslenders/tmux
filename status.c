@@ -452,11 +452,19 @@ status_replace1(struct client *c, struct session *s, struct winlink *wl,
 		else if (wl->window->active && wl->window->active->name)
 			ptr = wl->window->active->name;
 		else
-		    ptr = "";
+			ptr = "";
 		goto do_replace;
 	case 'F':
 		ptr = window_printable_flags(s, wl);
 		freeptr = ptr;
+		goto do_replace;
+	case 'x':
+		xsnprintf(tmp, sizeof tmp, "%u", wp->sx);
+		ptr = tmp;
+		goto do_replace;
+	case 'y':
+		xsnprintf(tmp, sizeof tmp, "%u", wp->sy);
+		ptr = tmp;
 		goto do_replace;
 	case '[':
 		/*
