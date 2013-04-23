@@ -291,10 +291,11 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 				/* TODO: move screen creation to somewhere else. */
 				status_len = screen_write_cstrlen(utf8flag, "%s", wp->name);
 
-				if (status_len > wp->sx - 4)
-					status_len = wp->sx - 4; /* TODO: does not seem to work */
+				if (status_len > wp->sx - 6)
+					status_len = wp->sx - 6;
 
 				screen_init(&wp->status, status_len + 2, 1, 0);
+				wp->status.mode = MODE_CURSOR; /* Disable word wrap. */
 				screen_write_start(&ctx, NULL, &wp->status);
 				if (wp == w->active)
 					screen_write_puts(&ctx, &active_status_gc, " %s ", wp->name);
