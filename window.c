@@ -276,6 +276,7 @@ window_create1(u_int sx, u_int sy)
 	w = xcalloc(1, sizeof *w);
 	w->id = next_window_id++;
 	w->name = NULL;
+	w->automatic_rename = 1;
 	w->flags = 0;
 
 	TAILQ_INIT(&w->panes);
@@ -322,8 +323,10 @@ window_create(const char *name, const char *cmd, const char *shell,
 	w->active = TAILQ_FIRST(&w->panes);
 	if (name != NULL) {
 		w->name = xstrdup(name);
-		options_set_number(&w->options, "automatic-rename", 0);
-	} else
+		w->automatic_rename = 0;
+	} else if (wp->name)
+		w->name = xstrdup(wp->name);
+	else
 		w->name = NULL;
 
 	return (w);
@@ -377,8 +380,13 @@ window_pane_set_name(struct window_pane *wp, const char *new_name)
 	free(wp->name);
 	wp->name = xstrdup(new_name);
 
-	if (wp->window->active == wp)
+	/* If this is the active pane. */
+	if (wp == wp->window->active) {
+		window_set_name(wp->window, new_name);
+		server_status_window(wp->window);
 		notify_window_renamed(wp->window);
+	}
+	server_redraw_window_borders(wp->window);
 }
 
 void
@@ -386,7 +394,7 @@ window_resize(struct window *w, u_int sx, u_int sy)
 {
 	w->sx = sx;
 	w->sy = sy;
-	layout_fix_panes(w, w->sx, w->sy); // TODO: not sure about this line.
+	layout_fix_panes(w, w->sx, w->sy); /* TODO: not entirely sure about this line. */
 }
 
 void
@@ -396,6 +404,10 @@ window_set_active_pane(struct window *w, struct window_pane *wp)
 		return;
 	w->last = w->active;
 	w->active = wp;
+
+	if (w->automatic_rename)
+		window_set_name(w, wp->name);
+
 	while (!window_pane_visible(w->active)) {
 		w->active = TAILQ_PREV(w->active, window_panes, entry);
 		if (w->active == NULL)
@@ -706,7 +718,10 @@ window_pane_create(struct window *w, u_int sx, u_int sy, u_int hlimit)
 
 	input_init(wp);
 
-	queue_window_pane_name(wp);
+	if (options_get_number(&w->options, "automatic-rename"))
+		queue_window_pane_name(wp);
+	else
+		wp->name = default_window_pane_name(wp);
 
 	return (wp);
 }
@@ -834,8 +849,11 @@ window_pane_spawn(struct window_pane *wp, const char *cmd, const char *shell,
 	setblocking(wp->fd, 0);
 
 	wp->event = bufferevent_new(wp->fd,
-	    window_pane_read_callback, NULL, window_pane_error_callback, wp);
+		window_pane_read_callback, NULL, window_pane_error_callback, wp);
 	bufferevent_enable(wp->event, EV_READ|EV_WRITE);
+
+	/* Original name, according to the shell running inside. */
+	window_pane_set_name(wp, default_window_pane_name(wp));
 
 	return (0);
 }

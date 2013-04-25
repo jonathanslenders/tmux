@@ -944,7 +944,7 @@ struct window_pane {
 	char		*shell;
 	char		*cwd;
 	char		*name;
-	int			*automatic_rename;
+	int			automatic_rename;
 	struct screen	 status;
 
 	pid_t		 pid;
@@ -985,6 +985,13 @@ RB_HEAD(window_pane_tree, window_pane);
 struct window {
 	u_int		 id;
 	char		*name;
+	int			automatic_rename;
+	/* Note: automatic_rename, means that this name has been set by the user
+	 *   it should not be change when another pane is selected, or another
+	 *   process is started. The window-option automatic-rename will enable/disable
+	 *   the timers for reading the pane's their process name.
+	 *   The panes can still change their names, when a window name has been set.
+	 *   */
 	struct timeval   silence_timer;
 
 	struct window_pane *active;

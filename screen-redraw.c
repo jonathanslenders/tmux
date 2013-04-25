@@ -278,7 +278,7 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 		}
 	}
 
-	/* Pane titles */
+	/* Pane status */
 	if (options_get_number(woo, "pane-status-visibility")) {
 		int utf8flag;
 		utf8flag = options_get_number(&wp->window->options, "utf8");

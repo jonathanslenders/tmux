@@ -91,6 +91,7 @@ cmd_set_option_exec(struct cmd *self, struct cmd_q *cmdq)
 	struct client				*c;
 	struct options				*oo;
 	struct window				*w;
+	struct window_pane			*wp;
 	const char				*optstr, *valstr;
 	u_int					 i;
 
@@ -161,21 +162,23 @@ cmd_set_option_exec(struct cmd *self, struct cmd_q *cmdq)
 	}
 
 	/* Start or stop timers when automatic-rename changed. */
-	if (strcmp (oe->name, "automatic-rename") == 0) {
+	if (strcmp(oe->name, "automatic-rename") == 0) {
 		for (i = 0; i < ARRAY_LENGTH(&windows); i++) {
 			if ((w = ARRAY_ITEM(&windows, i)) == NULL)
 				continue;
-			//if (options_get_number(&w->options, "automatic-rename"))
-			//	queue_window_name(w);
-			//else if (event_initialized(&w->name_timer))
-			//	evtimer_del(&w->name_timer);
+
+			TAILQ_FOREACH(wp, &w->panes, entry) {
+				if (wp->automatic_rename && options_get_number(&w->options, "automatic-rename"))
+					queue_window_pane_name(wp);
+				else if (event_initialized(&wp->name_timer))
+					evtimer_del(&wp->name_timer);
+			}
 		}
-        // TODO: start/stop pane timers instead.
 	}
 
 	/* Update sizes and redraw. May not need it but meh. */
 	recalculate_sizes(); // TODO: also layout thing for pane status bar
-    // layout_fix_panes(); // If the pane status was added or removed.
+	// layout_fix_panes(); // If the pane status was added or removed.
 	for (i = 0; i < ARRAY_LENGTH(&clients); i++) {
 		c = ARRAY_ITEM(&clients, i);
 		if (c != NULL && c->session != NULL)

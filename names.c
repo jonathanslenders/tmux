@@ -47,9 +47,11 @@ void
 window_pane_name_callback(unused int fd, unused short events, void *data)
 {
 	struct window_pane	*wp = data;
+	struct window *w = wp->window;
 	char		*name, *wpname;
 
-	if (!wp->automatic_rename) {
+	/* If a name has been set, or automatic-rename is off for the whole window, cancel timer. */
+	if (!wp->automatic_rename || !options_get_number(&w->options, "automatic-rename")) {
 		if (event_initialized(&wp->name_timer))
 			event_del(&wp->name_timer);
 		return;
@@ -67,7 +69,7 @@ window_pane_name_callback(unused int fd, unused short events, void *data)
 		 * present. Ick.
 		 */
 		if (wp->cmd != NULL && *wp->cmd == '\0' &&
-		    name != NULL && name[0] == '-' && name[1] != '\0')
+			name != NULL && name[0] == '-' && name[1] != '\0')
 			wpname = parse_window_name(name + 1);
 		else
 			wpname = parse_window_name(name);
@@ -79,22 +81,15 @@ window_pane_name_callback(unused int fd, unused short events, void *data)
 		wpname = name;
 	}
 
-	if (wp->name == NULL || strcmp(wpname, wp->name)) {
+	if (wp->name == NULL || strcmp(wpname, wp->name))
 		window_pane_set_name(wp, wpname);
-
-		/* Redraw status bar if this is the active pane. */
-		if (wp->window != wp->window->active)
-			server_status_window(wp->window);
-
-		server_redraw_window_borders(wp->window);
-	}
 	free(wpname);
 }
 
 char *
 default_window_pane_name(struct window_pane *wp)
 {
-    return parse_window_name(wp->shell);
+	return parse_window_name(wp->shell);
 }
 
 char *
