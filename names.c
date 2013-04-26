@@ -35,7 +35,7 @@ queue_window_pane_name(struct window_pane *wp)
 	struct timeval	tv;
 
 	tv.tv_sec = 0;
-	tv.tv_usec = NAME_INTERVAL * 500L;
+	tv.tv_usec = NAME_INTERVAL * 1000L;
 
 	if (event_initialized(&wp->name_timer))
 		evtimer_del(&wp->name_timer);
@@ -89,7 +89,7 @@ window_pane_name_callback(unused int fd, unused short events, void *data)
 char *
 default_window_pane_name(struct window_pane *wp)
 {
-	return parse_window_name(wp->shell);
+	return (parse_window_name(wp->shell));
 }
 
 char *

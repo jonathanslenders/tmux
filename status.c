@@ -456,14 +456,6 @@ status_replace1(struct client *c, struct session *s, struct winlink *wl,
 		ptr = window_printable_flags(s, wl);
 		freeptr = ptr;
 		goto do_replace;
-	case 'x':
-		xsnprintf(tmp, sizeof tmp, "%u", wp->sx);
-		ptr = tmp;
-		goto do_replace;
-	case 'y':
-		xsnprintf(tmp, sizeof tmp, "%u", wp->sy);
-		ptr = tmp;
-		goto do_replace;
 	case '[':
 		/*
 		 * Embedded style, handled at display time. Leave present and

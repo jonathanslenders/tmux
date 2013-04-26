@@ -168,7 +168,8 @@ cmd_set_option_exec(struct cmd *self, struct cmd_q *cmdq)
 				continue;
 
 			TAILQ_FOREACH(wp, &w->panes, entry) {
-				if (wp->automatic_rename && options_get_number(&w->options, "automatic-rename"))
+				if (wp->automatic_rename && options_get_number(&w->options,
+									"automatic-rename"))
 					queue_window_pane_name(wp);
 				else if (event_initialized(&wp->name_timer))
 					evtimer_del(&wp->name_timer);

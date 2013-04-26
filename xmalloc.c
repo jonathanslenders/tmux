@@ -31,9 +31,6 @@ xstrdup(const char *s)
 	char	*ptr;
 	size_t	 len;
 
-    if (!s)
-        return xstrdup("");
-
 	len = strlen(s) + 1;
 	ptr = xmalloc(len);
 
