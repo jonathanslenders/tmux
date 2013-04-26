@@ -719,8 +719,6 @@ window_pane_create(struct window *w, u_int sx, u_int sy, u_int hlimit)
 
 	if (options_get_number(&w->options, "automatic-rename"))
 		queue_window_pane_name(wp);
-	else
-		wp->name = default_window_pane_name(wp);
 
 	return (wp);
 }
