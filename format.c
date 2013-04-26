@@ -61,7 +61,7 @@ const char *format_aliases[26] = {
 	NULL,		/* K */
 	NULL,		/* L */
 	NULL,		/* M */
-	NULL,		/* N */
+	"pane_name",	/* N */
 	NULL,		/* O */
 	"pane_index",	/* P */
 	NULL,		/* Q */
@@ -418,6 +418,7 @@ format_window_pane(struct format_tree *ft, struct window_pane *wp)
 
 	format_add(ft, "pane_width", "%u", wp->sx);
 	format_add(ft, "pane_height", "%u", wp->sy);
+	format_add(ft, "pane_name", "%s", wp->name);
 	format_add(ft, "pane_title", "%s", wp->base.title);
 	format_add(ft, "pane_id", "%%%u", wp->id);
 	format_add(ft, "pane_active", "%d", wp == wp->window->active);

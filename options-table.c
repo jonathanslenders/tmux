@@ -260,16 +260,6 @@ const struct options_table_entry session_options_table[] = {
 	  .default_num = 2
 	},
 
-	{ .name = "pane-active-status-bg",
-	  .type = OPTIONS_TABLE_COLOUR,
-	  .default_num = 2
-	},
-
-	{ .name = "pane-active-status-fg",
-	  .type = OPTIONS_TABLE_COLOUR,
-	  .default_num = 8
-	},
-
 	{ .name = "pane-border-bg",
 	  .type = OPTIONS_TABLE_COLOUR,
 	  .default_num = 8
@@ -278,26 +268,6 @@ const struct options_table_entry session_options_table[] = {
 	{ .name = "pane-border-fg",
 	  .type = OPTIONS_TABLE_COLOUR,
 	  .default_num = 8
-	},
-
-	{ .name = "pane-active-status-attr",
-	  .type = OPTIONS_TABLE_ATTRIBUTES,
-	  .default_num = 0
-	},
-
-	{ .name = "pane-status-attr",
-	  .type = OPTIONS_TABLE_ATTRIBUTES,
-	  .default_num = 0
-	},
-
-	{ .name = "pane-status-bg",
-	  .type = OPTIONS_TABLE_COLOUR,
-	  .default_num = 8
-	},
-
-	{ .name = "pane-status-fg",
-	  .type = OPTIONS_TABLE_COLOUR,
-	  .default_num = 2
 	},
 
 	{ .name = "prefix",
@@ -617,6 +587,21 @@ const struct options_table_entry window_options_table[] = {
 	  .default_num = 0
 	},
 
+	{ .name = "pane-active-status-attr",
+	  .type = OPTIONS_TABLE_ATTRIBUTES,
+	  .default_num = 0
+	},
+
+	{ .name = "pane-active-status-bg",
+	  .type = OPTIONS_TABLE_COLOUR,
+	  .default_num = 2
+	},
+
+	{ .name = "pane-active-status-fg",
+	  .type = OPTIONS_TABLE_COLOUR,
+	  .default_num = 8
+	},
+
 	{ .name = "pane-base-index",
 	  .type = OPTIONS_TABLE_NUMBER,
 	  .minimum = 0,
@@ -624,9 +609,29 @@ const struct options_table_entry window_options_table[] = {
 	  .default_num = 0
 	},
 
-	{ .name = "pane-status-visibility",
+	{ .name = "pane-status",
 	  .type = OPTIONS_TABLE_FLAG,
 	  .default_num = 0
+	},
+
+	{ .name = "pane-status-attr",
+	  .type = OPTIONS_TABLE_ATTRIBUTES,
+	  .default_num = 0
+	},
+
+	{ .name = "pane-status-bg",
+	  .type = OPTIONS_TABLE_COLOUR,
+	  .default_num = 8
+	},
+
+	{ .name = "pane-status-fg",
+	  .type = OPTIONS_TABLE_COLOUR,
+	  .default_num = 2
+	},
+
+	{ .name = "pane-status-format",
+	  .type = OPTIONS_TABLE_STRING,
+	  .default_str = "#{pane_id}"
 	},
 
 	{ .name = "pane-status-position",

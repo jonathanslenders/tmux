@@ -31,6 +31,8 @@ int	screen_redraw_check_active(u_int, u_int, struct window *,
 	    struct window_pane *);
 char * strip_title(char *title, int length);
 
+void screen_redraw_pane_status(struct client *);
+
 void	screen_redraw_draw_number(struct client *, struct window_pane *);
 
 #define CELL_INSIDE 0
@@ -188,6 +190,91 @@ screen_redraw_check_active(u_int px, u_int py, struct window *w,
 		return (0);
 }
 
+/* Redraw pane status. */
+void
+screen_redraw_pane_status(struct client *c)
+{
+       struct window           *w = c->session->curw->window;
+       struct options          *oo = &w->options;
+       struct tty              *tty = &c->tty;
+       struct window_pane      *wp;
+       struct grid_cell         active_gc, other_gc;
+       int                      utf8flag, position, bg, fg, attr;
+       u_int                    yoff;
+       const char              *fmt;
+       struct format_tree      *ft;
+       char                    *out;
+       size_t                   outlen;
+       struct screen            s;
+       struct screen_write_ctx  ctx;
+
+       if (!options_get_number(oo, "pane-status"))
+               return;
+
+       memcpy(&other_gc, &grid_marker_cell, sizeof other_gc);
+       memcpy(&active_gc, &grid_marker_cell, sizeof active_gc);
+       bg = options_get_number(oo, "pane-status-bg");
+       colour_set_bg(&other_gc, bg);
+       fg = options_get_number(oo, "pane-status-fg");
+       colour_set_fg(&other_gc, fg);
+       attr = options_get_number(oo, "pane-status-attr");
+       if (attr != 0)
+               other_gc.attr = attr;
+       bg = options_get_number(oo, "pane-active-status-bg");
+       colour_set_bg(&active_gc, bg);
+       fg = options_get_number(oo, "pane-active-status-fg");
+       colour_set_fg(&active_gc, fg);
+       attr = options_get_number(oo, "pane-active-status-attr");
+       if (attr != 0)
+               active_gc.attr = attr;
+
+       fmt = options_get_string(oo, "pane-status-format");
+       position = options_get_number(oo, "pane-status-position");
+
+       screen_init(&s, w->sx, 1, 0);
+       s.mode = 0;
+
+       utf8flag = options_get_number(oo, "utf8");
+       TAILQ_FOREACH(wp, &w->panes, entry) {
+           ft = format_create();
+           format_client(ft, c);
+           format_session(ft, c->session);
+           format_winlink(ft, c->session, c->session->curw);
+
+
+               format_window_pane(ft, wp);
+               out = format_expand(ft, fmt);
+
+               outlen = screen_write_cstrlen(utf8flag, "%s", out);
+               if (outlen > wp->sx - 4)
+                       outlen = wp->sx - 4;
+               screen_resize(&s, outlen, 1, 0);
+
+               screen_write_start(&ctx, NULL, &s);
+               screen_write_cursormove(&ctx, 0, 0);
+               screen_write_clearline(&ctx);
+               if (wp == w->active) {
+                       screen_write_nputs(&ctx, outlen, &active_gc, utf8flag,
+                           "%s", out);
+               } else {
+                       screen_write_nputs(&ctx, outlen, &other_gc, utf8flag,
+                           "%s", out);
+               }
+               screen_write_stop(&ctx);
+
+               if (position == 0)
+                       yoff = wp->yoff - 1;
+               else
+                       yoff = wp->yoff + wp->sy;
+
+               tty_draw_line(tty, &s, 0, wp->xoff + 2, yoff);
+
+           format_free(ft);
+       }
+       tty_cursor(tty, 0, 0);
+
+}
+
 /* Redraw entire screen. */
 void
 screen_redraw_screen(struct client *c, int status_only, int borders_only)
@@ -197,7 +284,7 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	struct options		*woo = &w->options;
 	struct tty		*tty = &c->tty;
 	struct window_pane	*wp;
-	struct grid_cell	 active_gc, other_gc, active_status_gc, other_status_gc;
+	struct grid_cell	 active_gc, other_gc;
 	u_int		 	 i, j, type, top;
 	int		 	 status, spos, fg, bg, attr;
 
@@ -228,8 +315,6 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	/* Set up pane border attributes. */
 	memcpy(&other_gc, &grid_marker_cell, sizeof other_gc);
 	memcpy(&active_gc, &grid_marker_cell, sizeof active_gc);
-	memcpy(&other_status_gc, &grid_marker_cell, sizeof other_status_gc);
-	memcpy(&active_status_gc, &grid_marker_cell, sizeof active_status_gc);
 	active_gc.attr = other_gc.attr = GRID_ATTR_CHARSET;
 	fg = options_get_number(oo, "pane-border-fg");
 	colour_set_fg(&other_gc, fg);
@@ -239,23 +324,6 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	colour_set_fg(&active_gc, fg);
 	bg = options_get_number(oo, "pane-active-border-bg");
 	colour_set_bg(&active_gc, bg);
-
-	/* Pane status attributes */
-	bg = options_get_number(oo, "pane-status-bg");
-	colour_set_bg(&other_status_gc, bg);
-	fg = options_get_number(oo, "pane-status-fg");
-	colour_set_fg(&other_status_gc, fg);
-	attr = options_get_number(oo, "pane-status-attr");
-	if (attr != 0)
-		other_status_gc.attr = attr;
-
-	bg = options_get_number(oo, "pane-active-status-bg");
-	colour_set_bg(&active_status_gc, bg);
-	fg = options_get_number(oo, "pane-active-status-fg");
-	colour_set_fg(&active_status_gc, fg);
-	attr = options_get_number(oo, "pane-active-status-attr");
-	if (attr != 0)
-		active_status_gc.attr = attr;
 
 	/* Draw background and borders. */
 	for (j = 0; j < tty->sy - status; j++) {
@@ -278,41 +346,8 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 		}
 	}
 
-	/* Pane status */
-	if (options_get_number(woo, "pane-status-visibility")) {
-		int utf8flag;
-		utf8flag = options_get_number(&wp->window->options, "utf8");
-
-		TAILQ_FOREACH(wp, &w->panes, entry) {
-			if (wp->name) {
-				size_t status_len;
-				struct screen_write_ctx ctx;
-
-				/* TODO: move screen creation to somewhere else. */
-				status_len = screen_write_cstrlen(utf8flag, "%s", wp->name);
-
-				if (status_len > wp->sx - 6)
-					status_len = wp->sx - 6;
-
-				screen_init(&wp->status, status_len + 2, 1, 0);
-				wp->status.mode = MODE_CURSOR; /* Disable word wrap. */
-				screen_write_start(&ctx, NULL, &wp->status);
-				if (wp == w->active)
-					screen_write_puts(&ctx, &active_status_gc, " %s ", wp->name);
-				else
-					screen_write_puts(&ctx, &other_status_gc, " %s ", wp->name);
-				screen_write_stop(&ctx);
-
-				if (options_get_number(woo, "pane-status-position") == 0)
-					/* On top */
-					tty_draw_line(tty, &wp->status, 0, wp->xoff + 2, wp->yoff - 1);
-				else
-					/* On bottom */
-					tty_draw_line(tty, &wp->status, 0, wp->xoff + 2, wp->yoff + wp->sy);
-			}
-			tty_cursor(tty, 0, 0);
-		}
-	}
+	/* Redraw pane status */
+	screen_redraw_pane_status(c);
 
 	/* If only drawing borders, that's it. */
 	if (borders_only)
