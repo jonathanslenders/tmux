@@ -234,45 +234,44 @@ screen_redraw_pane_status(struct client *c)
        screen_init(&s, w->sx, 1, 0);
        s.mode = 0;
 
+       ft = format_create();
+       format_client(ft, c);
+       format_session(ft, c->session);
+       format_winlink(ft, c->session, c->session->curw);
+
        utf8flag = options_get_number(oo, "utf8");
        TAILQ_FOREACH(wp, &w->panes, entry) {
-           ft = format_create();
-           format_client(ft, c);
-           format_session(ft, c->session);
-           format_winlink(ft, c->session, c->session->curw);
+           format_window_pane(ft, wp);
+           out = format_expand(ft, fmt);
 
+           outlen = screen_write_cstrlen(utf8flag, "%s", out);
+           if (outlen > wp->sx - 4)
+                   outlen = wp->sx - 4;
+           screen_resize(&s, outlen, 1, 0);
 
-               format_window_pane(ft, wp);
-               out = format_expand(ft, fmt);
+           screen_write_start(&ctx, NULL, &s);
+           screen_write_cursormove(&ctx, 0, 0);
+           screen_write_clearline(&ctx);
+           if (wp == w->active) {
+                   screen_write_nputs(&ctx, outlen, &active_gc, utf8flag,
+                       "%s", out);
+           } else {
+                   screen_write_nputs(&ctx, outlen, &other_gc, utf8flag,
+                       "%s", out);
+           }
+           screen_write_stop(&ctx);
 
-               outlen = screen_write_cstrlen(utf8flag, "%s", out);
-               if (outlen > wp->sx - 4)
-                       outlen = wp->sx - 4;
-               screen_resize(&s, outlen, 1, 0);
+           if (position == 0)
+                   yoff = wp->yoff - 1;
+           else
+                   yoff = wp->yoff + wp->sy;
 
-               screen_write_start(&ctx, NULL, &s);
-               screen_write_cursormove(&ctx, 0, 0);
-               screen_write_clearline(&ctx);
-               if (wp == w->active) {
-                       screen_write_nputs(&ctx, outlen, &active_gc, utf8flag,
-                           "%s", out);
-               } else {
-                       screen_write_nputs(&ctx, outlen, &other_gc, utf8flag,
-                           "%s", out);
-               }
-               screen_write_stop(&ctx);
+           tty_draw_line(tty, &s, 0, wp->xoff + 2, yoff);
 
-               if (position == 0)
-                       yoff = wp->yoff - 1;
-               else
-                       yoff = wp->yoff + wp->sy;
-
-               tty_draw_line(tty, &s, 0, wp->xoff + 2, yoff);
-
-           format_free(ft);
        }
        tty_cursor(tty, 0, 0);
 
+       format_free(ft);
 }
 
 /* Redraw entire screen. */
