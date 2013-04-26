@@ -186,9 +186,7 @@ layout_need_status(struct layout_cell *lc, int at_top)
 		else
 			return (0);
 	}
-	else
-		/* The most parent pane always needs to have status space. */
-		return (1);
+	return (1);
 }
 
 /* Update pane offsets and sizes based on their cells. */

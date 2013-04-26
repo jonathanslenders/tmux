@@ -394,7 +394,6 @@ window_resize(struct window *w, u_int sx, u_int sy)
 {
 	w->sx = sx;
 	w->sy = sy;
-	layout_fix_panes(w, w->sx, w->sy); /* TODO: not entirely sure about this line. */
 }
 
 void

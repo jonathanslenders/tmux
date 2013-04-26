@@ -81,6 +81,7 @@ cmd_break_pane_exec(struct cmd *self, struct cmd_q *cmdq)
 	w = wp->window = window_create1(s->sx, s->sy);
 	TAILQ_INSERT_HEAD(&w->panes, wp, entry);
 	w->active = wp;
+	window_set_name(w, wp->name);
 	layout_init(w, wp);
 
 	base_idx = options_get_number(&s->options, "base-index");
