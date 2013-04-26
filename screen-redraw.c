@@ -267,7 +267,6 @@ screen_redraw_pane_status(struct client *c)
 				 yoff = wp->yoff + wp->sy;
 
 			tty_draw_line(tty, &s, 0, wp->xoff + 2, yoff);
-
 		 }
 		 tty_cursor(tty, 0, 0);
 
