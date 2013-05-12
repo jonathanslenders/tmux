@@ -26,7 +26,7 @@ int	screen_redraw_cell_border1(struct window_pane *, u_int, u_int);
 int	screen_redraw_cell_border(struct client *, u_int, u_int);
 int	screen_redraw_check_cell(struct client *, u_int, u_int,
 	    struct window_pane **);
-int	screen_redraw_check_active(u_int, u_int, int, struct window *,
+int	screen_redraw_check_active(u_int, u_int, struct window *,
 	    struct window_pane *);
 
 void	screen_redraw_draw_number(struct client *, struct window_pane *);
@@ -174,44 +174,14 @@ screen_redraw_check_cell(struct client *c, u_int px, u_int py,
 
 /* Check active pane indicator. */
 int
-screen_redraw_check_active(u_int px, u_int py, int type, struct window *w,
+screen_redraw_check_active(u_int px, u_int py, struct window *w,
     struct window_pane *wp)
 {
 	/* Is this off the active pane border? */
-	if (screen_redraw_cell_border1(w->active, px, py) != 1)
-		return (0);
-
-	/* If there are more than two panes, that's enough. */
-	if (window_count_panes(w) != 2)
+	if (screen_redraw_cell_border1(w->active, px, py) == 1)
 		return (1);
-
-	/* Else if the cell is not a border cell, forget it. */
-	if (wp == NULL || (type == CELL_OUTSIDE || type == CELL_INSIDE))
-		return (1);
-
-	/* Check if the pane covers the whole width. */
-	if (wp->xoff == 0 && wp->sx == w->sx) {
-		/* This can either be the top pane or the bottom pane. */
-		if (wp->yoff == 0) { /* top pane */
-			if (wp == w->active)
-				return (px <= wp->sx / 2);
-			return (px > wp->sx / 2);
-		}
+	else
 		return (0);
-	}
-
-	/* Check if the pane covers the whole height. */
-	if (wp->yoff == 0 && wp->sy == w->sy) {
-		/* This can either be the left pane or the right pane. */
-		if (wp->xoff == 0) { /* left pane */
-			if (wp == w->active)
-				return (py <= wp->sy / 2);
-			return (py > wp->sy / 2);
-		}
-		return (0);
-	}
-
-	return (type);
 }
 
 /* Redraw entire screen. */
@@ -275,7 +245,7 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 			type = screen_redraw_check_cell(c, i, j, &wp);
 			if (type == CELL_INSIDE)
 				continue;
-			if (screen_redraw_check_active(i, j, type, w, wp))
+			if (screen_redraw_check_active(i, j, w, wp))
 				tty_attributes(tty, &active_gc);
 			else
 				tty_attributes(tty, &other_gc);
