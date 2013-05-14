@@ -220,6 +220,7 @@ screen_redraw_pane_status(struct client *c)
 		struct grid_cell         active_gc, other_gc;
 		int                      utf8flag, position, bg, fg, attr;
 		u_int                    yoff;
+		const char              *active_fmt;
 		const char              *fmt;
 		struct format_tree      *ft;
 		char                    *out;
@@ -248,6 +249,7 @@ screen_redraw_pane_status(struct client *c)
 		 if (attr != 0)
 			active_gc.attr = attr;
 
+		 active_fmt = options_get_string(oo, "pane-active-status-format");
 		 fmt = options_get_string(oo, "pane-status-format");
 		 position = options_get_number(oo, "pane-status-position");
 
@@ -262,7 +264,11 @@ screen_redraw_pane_status(struct client *c)
 		 utf8flag = options_get_number(oo, "utf8");
 		 TAILQ_FOREACH(wp, &w->panes, entry) {
 			format_window_pane(ft, wp);
-			out = format_expand(ft, fmt);
+
+			if (wp == w->active)
+				out = format_expand(ft, active_fmt);
+			else
+				out = format_expand(ft, fmt);
 
 			outlen = screen_write_cstrlen(utf8flag, "%s", out);
 			if (outlen > wp->sx - 4)
@@ -281,10 +287,10 @@ screen_redraw_pane_status(struct client *c)
 				   appear partly or completely on the border of active panes.
 				   In that case we prefer to have the background colour of the
 				   active pane. */
-			    if (position == 0)
-				    bgmask = create_bg_mask(c, w, wp->xoff + 2, wp->yoff - 1, wp->sx);
-                else
-				    bgmask = create_bg_mask(c, w, wp->xoff + 2, wp->sy, wp->sx);
+				if (position == 0)
+					bgmask = create_bg_mask(c, w, wp->xoff + 2, wp->yoff - 1, wp->sx);
+				else
+					bgmask = create_bg_mask(c, w, wp->xoff + 2, wp->sy, wp->sx);
 				screen_write_cnputs2(&ctx, outlen, &other_gc, bgmask, wp->sx, utf8flag, out);
 				free(bgmask);
 			}

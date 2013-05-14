@@ -245,6 +245,7 @@ screen_write_cnputs2(struct screen_write_ctx *ctx,
 	size_t			 left, size = 0;
 	int              pos;
 	int              startpos = ctx->s->cx;
+	int              bg_is_default = 1;
 
 	memcpy(&lgc, gc, sizeof lgc);
 
@@ -259,15 +260,15 @@ screen_write_cnputs2(struct screen_write_ctx *ctx,
 			}
 			*last = '\0';
 
-			screen_write_parsestyle(gc, &lgc, ptr);
+			screen_write_parsestyle(gc, &lgc, ptr, &bg_is_default);
 			ptr = last + 1;
 			continue;
 		}
 
-		/* Copy gc and patch background colour */
+		/* Copy gc and patch background colour (if no background colour was set in the style) */
 		memcpy(&lgc2, &lgc, sizeof lgc);
 		pos = ctx->s->cx - startpos;
-		if (bgarray != NULL && pos >= 0 && pos < bgarraysize) {
+		if (bg_is_default == 1 && bgarray != NULL && pos >= 0 && pos < bgarraysize) {
 			int c = bgarray[pos];
 			if (c > 0)
 				colour_set_bg(&lgc2, c);
@@ -311,7 +312,7 @@ screen_write_cnputs2(struct screen_write_ctx *ctx,
 /* Parse an embedded style of the form "fg=colour,bg=colour,bright,...". */
 void
 screen_write_parsestyle(
-    struct grid_cell *defgc, struct grid_cell *gc, const char *in)
+    struct grid_cell *defgc, struct grid_cell *gc, const char *in, int* bg_is_default)
 {
 	const char	delimiters[] = " ,";
 	char		tmp[32];
@@ -338,6 +339,7 @@ screen_write_parsestyle(
 		if (strcasecmp(tmp, "default") == 0) {
 			fg = defgc->fg;
 			bg = defgc->bg;
+			*bg_is_default = 1;
 			attr = defgc->attr;
 			flags &= ~(GRID_FLAG_FG256|GRID_FLAG_BG256);
 			flags |=
@@ -366,8 +368,10 @@ screen_write_parsestyle(
 					} else
 						flags &= ~GRID_FLAG_BG256;
 					bg = val;
+					*bg_is_default = 0;
 				} else {
 					bg = defgc->bg;
+					*bg_is_default = 1;
 					flags &= ~GRID_FLAG_BG256;
 					flags |= defgc->flags & GRID_FLAG_BG256;
 				}

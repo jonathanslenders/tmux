@@ -602,6 +602,11 @@ const struct options_table_entry window_options_table[] = {
 	  .default_num = 8
 	},
 
+	{ .name = "pane-active-status-format",
+	  .type = OPTIONS_TABLE_STRING,
+	  .default_str = "#{pane_id}"
+	},
+
 	{ .name = "pane-base-index",
 	  .type = OPTIONS_TABLE_NUMBER,
 	  .minimum = 0,

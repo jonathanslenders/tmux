@@ -2065,7 +2065,7 @@ void printflike5 screen_write_nputs(struct screen_write_ctx *,
 void	 screen_write_vnputs(struct screen_write_ctx *,
 	     ssize_t, struct grid_cell *, int, const char *, va_list);
 void	 screen_write_parsestyle(
-	     struct grid_cell *, struct grid_cell *, const char *);
+	     struct grid_cell *, struct grid_cell *, const char *, int*);
 void	 screen_write_putc(
 	     struct screen_write_ctx *, struct grid_cell *, u_char);
 void	 screen_write_copy(struct screen_write_ctx *,
