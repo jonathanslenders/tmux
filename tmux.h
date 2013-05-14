@@ -2054,6 +2054,9 @@ void	 screen_write_reset(struct screen_write_ctx *);
 size_t printflike2 screen_write_cstrlen(int, const char *, ...);
 void printflike5 screen_write_cnputs(struct screen_write_ctx *,
 	     ssize_t, struct grid_cell *, int, const char *, ...);
+void screen_write_cnputs2(struct screen_write_ctx *ctx,
+	     ssize_t maxlen, struct grid_cell *gc, int* bgarray,
+	     int bgarraysize, int utf8flag, char *msg);
 size_t printflike2 screen_write_strlen(int, const char *, ...);
 void printflike3 screen_write_puts(struct screen_write_ctx *,
 	     struct grid_cell *, const char *, ...);

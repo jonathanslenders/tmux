@@ -224,16 +224,27 @@ void printflike5
 screen_write_cnputs(struct screen_write_ctx *ctx,
     ssize_t maxlen, struct grid_cell *gc, int utf8flag, const char *fmt, ...)
 {
-	struct grid_cell	 lgc;
-	struct utf8_data	 utf8data;
 	va_list			 ap;
 	char			*msg;
-	u_char 			*ptr, *last;
-	size_t			 left, size = 0;
-
 	va_start(ap, fmt);
 	xvasprintf(&msg, fmt, ap);
 	va_end(ap);
+
+	screen_write_cnputs2(ctx, maxlen, gc, NULL, 0, utf8flag, msg);
+}
+
+/* Like screen_write_cnputs, but accepts a background colour array (to override bg colours). */
+void
+screen_write_cnputs2(struct screen_write_ctx *ctx,
+    ssize_t maxlen, struct grid_cell *gc, int* bgarray, int bgarraysize, int utf8flag, char *msg)
+{
+	struct grid_cell	 lgc;
+	struct grid_cell	 lgc2;
+	struct utf8_data	 utf8data;
+	u_char 			*ptr, *last;
+	size_t			 left, size = 0;
+	int              pos;
+	int              startpos = ctx->s->cx;
 
 	memcpy(&lgc, gc, sizeof lgc);
 
@@ -251,6 +262,15 @@ screen_write_cnputs(struct screen_write_ctx *ctx,
 			screen_write_parsestyle(gc, &lgc, ptr);
 			ptr = last + 1;
 			continue;
+		}
+
+		/* Copy gc and patch background colour */
+		memcpy(&lgc2, &lgc, sizeof lgc);
+		pos = ctx->s->cx - startpos;
+		if (bgarray != NULL && pos >= 0 && pos < bgarraysize) {
+			int c = bgarray[pos];
+			if (c > 0)
+				colour_set_bg(&lgc2, c);
 		}
 
 		if (utf8flag && *ptr > 0x7f && utf8_open(&utf8data, *ptr)) {
@@ -273,14 +293,14 @@ screen_write_cnputs(struct screen_write_ctx *ctx,
 			}
 			size += utf8data.width;
 
-			grid_cell_set(&lgc, &utf8data);
-			screen_write_cell(ctx, &lgc);
+			grid_cell_set(&lgc2, &utf8data);
+			screen_write_cell(ctx, &lgc2);
 		} else {
 			if (maxlen > 0 && size + 1 > (size_t) maxlen)
 				break;
 
 			size++;
-			screen_write_putc(ctx, &lgc, *ptr);
+			screen_write_putc(ctx, &lgc2, *ptr);
 			ptr++;
 		}
 	}

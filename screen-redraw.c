@@ -29,7 +29,8 @@ int	screen_redraw_check_cell(struct client *, u_int, u_int,
 
 int	screen_redraw_check_active(u_int, u_int, struct window *,
 	    struct window_pane *);
-char * strip_title(char *title, int length);
+int*
+create_bg_mask(struct client *c, struct window *w, int px, int py, int size);
 
 void screen_redraw_pane_status(struct client *);
 
@@ -181,13 +182,31 @@ screen_redraw_check_cell(struct client *c, u_int px, u_int py,
 /* Check active pane indicator. */
 int
 screen_redraw_check_active(u_int px, u_int py, struct window *w,
-    struct window_pane *wp)
+    struct window_pane *wp) /* TODO: we don't need the wp parameter. */
 {
 	/* Is this off the active pane border? */
 	if (screen_redraw_cell_border1(w->active, px, py) == 1)
 		return (1);
 	else
 		return (0);
+}
+
+/* Create an int-array of background colours for the pane status. */
+int*
+create_bg_mask(struct client *c, struct window *w, int px, int py, int size)
+{
+	int * result = xmalloc(sizeof(int) * size);
+	struct options		*oo = &c->session->options;
+	int bg = options_get_number(oo, "pane-active-border-bg");
+	int i;
+
+	for (i = 0; i < size; i ++) {
+		if (screen_redraw_cell_border1(w->active, i+px, py) == 1)
+			result[i] = bg;
+		else
+			result[i] = -1; // No mask
+	}
+	return result;
 }
 
 /* Redraw pane status. */
@@ -207,6 +226,7 @@ screen_redraw_pane_status(struct client *c)
 		size_t                   outlen;
 		struct screen            s;
 		struct screen_write_ctx  ctx;
+		int                     *bgmask;
 
 		if (!options_get_number(oo, "pane-status"))
 			return;
@@ -249,15 +269,24 @@ screen_redraw_pane_status(struct client *c)
 				outlen = wp->sx - 4;
 			screen_resize(&s, outlen, 1, 0);
 
+
 			screen_write_start(&ctx, NULL, &s);
 			screen_write_cursormove(&ctx, 0, 0);
 			screen_write_clearline(&ctx);
 			if (wp == w->active) {
-				screen_write_nputs(&ctx, outlen, &active_gc, utf8flag,
+				screen_write_cnputs(&ctx, outlen, &active_gc, utf8flag,
 					"%s", out);
 			} else {
-				screen_write_nputs(&ctx, outlen, &other_gc, utf8flag,
-					"%s", out);
+				/* It's possible that the pane status bar of inactive panes
+				   appear partly or completely on the border of active panes.
+				   In that case we prefer to have the background colour of the
+				   active pane. */
+			    if (position == 0)
+				    bgmask = create_bg_mask(c, w, wp->xoff + 2, wp->yoff - 1, wp->sx);
+                else
+				    bgmask = create_bg_mask(c, w, wp->xoff + 2, wp->sy, wp->sx);
+				screen_write_cnputs2(&ctx, outlen, &other_gc, bgmask, wp->sx, utf8flag, out);
+				free(bgmask);
 			}
 			screen_write_stop(&ctx);
 
