@@ -604,7 +604,7 @@ const struct options_table_entry window_options_table[] = {
 
 	{ .name = "pane-active-status-format",
 	  .type = OPTIONS_TABLE_STRING,
-	  .default_str = "#{pane_id}"
+	  .default_str = " #{pane_id}: #{pane_name} "
 	},
 
 	{ .name = "pane-base-index",
@@ -636,7 +636,7 @@ const struct options_table_entry window_options_table[] = {
 
 	{ .name = "pane-status-format",
 	  .type = OPTIONS_TABLE_STRING,
-	  .default_str = "#{pane_id}"
+	  .default_str = " #{pane_id}: #{pane_name} "
 	},
 
 	{ .name = "pane-status-position",
