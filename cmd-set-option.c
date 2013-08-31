@@ -177,9 +177,20 @@ cmd_set_option_exec(struct cmd *self, struct cmd_q *cmdq)
 		}
 	}
 
+	/* When the pane-status option has been changed, resize panes */
+	if (strcmp(oe->name, "pane-status") == 0 ||
+				strcmp(oe->name, "pane-status-position") == 0) {
+		for (i = 0; i < ARRAY_LENGTH(&windows); i++) {
+			if ((w = ARRAY_ITEM(&windows, i)) == NULL)
+				continue;
+
+			layout_fix_panes(w, w->sx, w->sy);
+		}
+	}
+
 	/* Update sizes and redraw. May not need it but meh. */
-	recalculate_sizes(); // TODO: also layout thing for pane status bar
-	// layout_fix_panes(); // If the pane status was added or removed.
+	recalculate_sizes();
+
 	for (i = 0; i < ARRAY_LENGTH(&clients); i++) {
 		c = ARRAY_ITEM(&clients, i);
 		if (c != NULL && c->session != NULL)
