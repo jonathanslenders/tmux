@@ -103,7 +103,7 @@ screen_redraw_cell_border(struct client *c, u_int px, u_int py)
 /* Check if cell inside a pane. */
 int
 screen_redraw_check_cell(struct client *c, u_int px, u_int py,
-    int pane_status, struct window_pane **wpp)
+    int pane_status_at_top, struct window_pane **wpp)
 {
 	struct window		*w = c->session->curw->window;
 	struct window_pane	*wp;
@@ -137,13 +137,9 @@ screen_redraw_check_cell(struct client *c, u_int px, u_int py,
 			borders |= 8;
 		if (px <= w->sx && screen_redraw_cell_border(c, px + 1, py))
 			borders |= 4;
-        if (pane_status) {
-			if (py != 0 && screen_redraw_cell_border(c, px, py - 1))
-				borders |= 2;
-        } else {
-			if (py == 0 || screen_redraw_cell_border(c, px, py - 1))
-				borders |= 2;
-        }
+
+		if ((py == 0 && !pane_status_at_top) || screen_redraw_cell_border(c, px, py - 1))
+			borders |= 2;
 		if (py <= w->sy && screen_redraw_cell_border(c, px, py + 1))
 			borders |= 1;
 
@@ -359,7 +355,7 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	struct window_pane	*wp;
 	struct grid_cell	 active_gc, other_gc;
 	u_int		 	 i, j, type, top;
-	int		 	 status, pane_status, spos, fg, bg, attr;
+	int		 	 status, pane_status, pane_status_at_top, spos, fg, bg, attr;
 
 	/* Suspended clients should not be updated. */
 	if (c->flags & CLIENT_SUSPENDED)
@@ -377,6 +373,8 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 		top = 0;
 
 	pane_status = options_get_number(&w->options, "pane-status");
+	pane_status_at_top = pane_status &&
+			!options_get_number(&w->options, "pane-status-position");
 
 	/* If only drawing status and it is present, don't need the rest. */
 	if (status_only && status) {
@@ -410,7 +408,7 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 				break;
 		}
 		for (i = 0; i < tty->sx; i++) {
-			type = screen_redraw_check_cell(c, i, j, pane_status, &wp);
+			type = screen_redraw_check_cell(c, i, j, pane_status_at_top, &wp);
 			if (type == CELL_INSIDE)
 				continue;
 			if (screen_redraw_check_active(i, j, type, w, wp))
