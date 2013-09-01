@@ -107,7 +107,7 @@ screen_redraw_check_cell(struct client *c, u_int px, u_int py,
 {
 	struct window		*w = c->session->curw->window;
 	struct window_pane	*wp;
-	int			 borders;
+	int			        borders;
 
 	if (px > w->sx || py > w->sy)
 		return (CELL_OUTSIDE);
@@ -232,18 +232,18 @@ screen_redraw_check_active(u_int px, u_int py, int type, struct window *w,
 int*
 create_bg_mask(struct client *c, struct window *w, int px, int py, int size)
 {
-	int * result = xmalloc(sizeof(int) * size);
-	struct options		*oo = &c->session->options;
-	int bg = options_get_number(oo, "pane-active-border-bg");
-	int i;
+	int             *result = xmalloc(sizeof(int) * size);
+	struct options  *oo = &c->session->options;
+	int             bg = options_get_number(oo, "pane-active-border-bg");
+	int             i;
 
 	for (i = 0; i < size; i ++) {
 		if (screen_redraw_cell_border1(w->active, i+px, py) == 1)
 			result[i] = bg;
 		else
-			result[i] = -1; // No mask
+			result[i] = -1; /* No mask */
 	}
-	return result;
+	return (result);
 }
 
 /* Redraw pane status. */
@@ -366,9 +366,11 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 		status = 1;
 	else
 		status = options_get_number(oo, "status");
-	top = 0;
 	if (status && spos == 0)
 		top = 1;
+	else
+		top = 0;
+
 	pane_status = options_get_number(&w->options, "pane-status");
 
 	/* If only drawing status and it is present, don't need the rest. */
