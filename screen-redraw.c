@@ -24,7 +24,7 @@
 
 int	screen_redraw_cell_border1(struct window_pane *, u_int, u_int);
 int	screen_redraw_cell_border(struct client *, u_int, u_int);
-int	screen_redraw_check_cell(struct client *, u_int, u_int,
+int	screen_redraw_check_cell(struct client *, u_int, u_int, int,
 	    struct window_pane **);
 int	screen_redraw_check_active(u_int, u_int, int, struct window *,
 	    struct window_pane *);
@@ -49,9 +49,8 @@ void	screen_redraw_draw_number(struct client *, struct window_pane *);
 #define CELL_JOIN 11
 #define CELL_OUTSIDE 12
 
-/* #define CELL_BORDERS " xqlkmjwvtun~" */
-#define CELL_BORDERS " xqlkmjwqtun~" /* XXX: Not correct. I changed one symbol to
-                                        get the upper border correct with pane titles. */
+#define CELL_BORDERS " xqlkmjwvtun~"
+
 
 /* Check if cell is on the border of a particular pane. */
 int
@@ -104,7 +103,7 @@ screen_redraw_cell_border(struct client *c, u_int px, u_int py)
 /* Check if cell inside a pane. */
 int
 screen_redraw_check_cell(struct client *c, u_int px, u_int py,
-    struct window_pane **wpp)
+    int pane_status, struct window_pane **wpp)
 {
 	struct window		*w = c->session->curw->window;
 	struct window_pane	*wp;
@@ -138,8 +137,13 @@ screen_redraw_check_cell(struct client *c, u_int px, u_int py,
 			borders |= 8;
 		if (px <= w->sx && screen_redraw_cell_border(c, px + 1, py))
 			borders |= 4;
-		if (py == 0 || screen_redraw_cell_border(c, px, py - 1))
-			borders |= 2;
+        if (pane_status) {
+			if (py != 0 && screen_redraw_cell_border(c, px, py - 1))
+				borders |= 2;
+        } else {
+			if (py == 0 || screen_redraw_cell_border(c, px, py - 1))
+				borders |= 2;
+        }
 		if (py <= w->sy && screen_redraw_cell_border(c, px, py + 1))
 			borders |= 1;
 
@@ -253,8 +257,7 @@ screen_redraw_pane_status(struct client *c)
 		struct grid_cell         active_gc, other_gc;
 		int                      utf8flag, position, bg, fg, attr;
 		u_int                    yoff;
-		const char              *active_fmt;
-		const char              *fmt;
+		const char              *active_fmt, *fmt;
 		struct format_tree      *ft;
 		char                    *out;
 		size_t                   outlen;
@@ -286,13 +289,13 @@ screen_redraw_pane_status(struct client *c)
 		 fmt = options_get_string(oo, "pane-status-format");
 		 position = options_get_number(oo, "pane-status-position");
 
-		 screen_init(&s, w->sx, 1, 0);
-		 s.mode = 0;
-
 		 ft = format_create();
 		 format_client(ft, c);
 		 format_session(ft, c->session);
 		 format_winlink(ft, c->session, c->session->curw);
+
+		 screen_init(&s, w->sx, 1, 0);
+		 s.mode = 0;
 
 		 utf8flag = options_get_number(oo, "utf8");
 		 TAILQ_FOREACH(wp, &w->panes, entry) {
@@ -307,7 +310,6 @@ screen_redraw_pane_status(struct client *c)
 			if (outlen > wp->sx - 4)
 				outlen = wp->sx - 4;
 			screen_resize(&s, outlen, 1, 0);
-
 
 			screen_write_start(&ctx, NULL, &s);
 			screen_write_cursormove(&ctx, 0, 0);
@@ -352,7 +354,7 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	struct window_pane	*wp;
 	struct grid_cell	 active_gc, other_gc;
 	u_int		 	 i, j, type, top;
-	int		 	 status, spos, fg, bg, attr;
+	int		 	 status, pane_status, spos, fg, bg, attr;
 
 	/* Suspended clients should not be updated. */
 	if (c->flags & CLIENT_SUSPENDED)
@@ -367,6 +369,7 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	top = 0;
 	if (status && spos == 0)
 		top = 1;
+	pane_status = options_get_number(&w->options, "pane-status");
 
 	/* If only drawing status and it is present, don't need the rest. */
 	if (status_only && status) {
@@ -400,7 +403,7 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 				break;
 		}
 		for (i = 0; i < tty->sx; i++) {
-			type = screen_redraw_check_cell(c, i, j, &wp);
+			type = screen_redraw_check_cell(c, i, j, pane_status, &wp);
 			if (type == CELL_INSIDE)
 				continue;
 			if (screen_redraw_check_active(i, j, type, w, wp))
@@ -413,7 +416,8 @@ screen_redraw_screen(struct client *c, int status_only, int borders_only)
 	}
 
 	/* Redraw pane status */
-	screen_redraw_pane_status(c);
+	if (pane_status)
+		screen_redraw_pane_status(c);
 
 	/* If only drawing borders, that's it. */
 	if (borders_only)

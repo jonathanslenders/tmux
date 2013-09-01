@@ -716,8 +716,9 @@ void
 server_client_check_redraw(struct client *c)
 {
 	struct session		*s = c->session;
+	struct window       *w = s->curw->window;
 	struct window_pane	*wp;
-	int		 	 flags, redraw;
+	int		 	 flags, redraw, pane_status;
 
 	if (c->flags & (CLIENT_CONTROL|CLIENT_SUSPENDED))
 		return;
@@ -725,9 +726,14 @@ server_client_check_redraw(struct client *c)
 	flags = c->tty.flags & TTY_FREEZE;
 	c->tty.flags &= ~TTY_FREEZE;
 
+	pane_status = 0;
 	if (c->flags & (CLIENT_REDRAW|CLIENT_STATUS)) {
 		if (options_get_number(&s->options, "set-titles"))
 			server_client_set_title(c);
+
+		pane_status = options_get_number(&w->options, "pane-status");
+		if (c->flags & CLIENT_REDRAW)
+			pane_status = 0;
 
 		if (c->message_string != NULL)
 			redraw = status_message_redraw(c);
@@ -752,6 +758,9 @@ server_client_check_redraw(struct client *c)
 				screen_redraw_pane(c, wp);
 		}
 	}
+
+	if (pane_status)
+		screen_redraw_pane_status(c);
 
 	if (c->flags & CLIENT_BORDERS)
 		screen_redraw_screen(c, 0, 1);
