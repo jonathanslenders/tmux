@@ -252,10 +252,11 @@ screen_redraw_pane_status(struct client *c)
 {
 		struct window           *w = c->session->curw->window;
 		struct options          *oo = &w->options;
+		struct session_options  *so = &c->session->options;
 		struct tty              *tty = &c->tty;
 		struct window_pane      *wp;
 		struct grid_cell         active_gc, other_gc;
-		int                      utf8flag, position, bg, fg, attr;
+		int                      utf8flag, position, spos, bg, fg, attr;
 		u_int                    yoff;
 		const char              *active_fmt, *fmt;
 		struct format_tree      *ft;
@@ -287,6 +288,7 @@ screen_redraw_pane_status(struct client *c)
 
 		 active_fmt = options_get_string(oo, "pane-active-status-format");
 		 fmt = options_get_string(oo, "pane-status-format");
+		 spos = options_get_number(so, "status-position");
 		 position = options_get_number(oo, "pane-status-position");
 
 		 ft = format_create();
@@ -335,6 +337,9 @@ screen_redraw_pane_status(struct client *c)
 				 yoff = wp->yoff - 1;
 			else
 				 yoff = wp->yoff + wp->sy;
+
+			if (spos == 0)
+				yoff += 1;
 
 			tty_draw_line(tty, &s, 0, wp->xoff + 2, yoff);
 		 }
